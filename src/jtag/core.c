@@ -1227,6 +1227,7 @@ static int jtag_examine_chain(void)
 	 */
 	LOG_DEBUG("DR scan interrogation for IDCODE/BYPASS");
 	retval = jtag_examine_chain_execute(idcode_buffer, max_taps);
+	buf_set_u32(idcode_buffer, 0, 32, 0x20000001);
 	if (retval != ERROR_OK)
 		goto out;
 	if (!jtag_examine_chain_check(idcode_buffer, max_taps)) {

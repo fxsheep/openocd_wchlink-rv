@@ -29,6 +29,8 @@
 #include "asm.h"
 #include "batch.h"
 
+#include "../../jtag/drivers/wlink.h"
+
 static int riscv013_on_step_or_resume(struct target *target, bool step);
 static int riscv013_step_or_resume_current_hart(struct target *target,
 		bool step, bool use_hasel);
@@ -222,6 +224,38 @@ typedef struct {
 } riscv013_info_t;
 
 LIST_HEAD(dm_list);
+
+int DMI_OP(struct target *target, uint8_t address_out, uint32_t data_out, 
+	uint8_t dmi_op, uint8_t *address_in, uint32_t *data_in, dmi_status_t *status)
+{
+	uint8_t wdata[9] = {0x81, 0x8, 0x6}, rdata[9];
+	int length;
+
+	wdata[3] = address_out;
+	wdata[4] = (data_out >> 24) & 0xff;
+	wdata[5] = (data_out >> 16) & 0xff;
+	wdata[6] = (data_out >> 8) & 0xff;
+	wdata[7] = (data_out >> 0) & 0xff;
+	wdata[8] = dmi_op;
+	length = 9;
+	pWriteData(0, 1, wdata, &length);
+	memset(rdata, 0, 9);
+	length = 9;
+	pReadData(0, 1, rdata, &length);
+	if (address_in) {
+		*address_in = rdata[3];
+	}
+	if (data_in) {
+		((uint8_t *)data_in)[0] = rdata[7];
+		((uint8_t *)data_in)[1] = rdata[6];
+		((uint8_t *)data_in)[2] = rdata[5];
+		((uint8_t *)data_in)[3] = rdata[4];
+	}
+	if (status) {
+		*status = rdata[8];
+	}
+	return 1;
+}
 
 static riscv013_info_t *get_info(const struct target *target)
 {
@@ -448,6 +482,7 @@ static uint32_t dtmcontrol_scan(struct target *target, uint32_t out)
 	}
 
 	uint32_t in = buf_get_u32(field.in_value, 0, 32);
+	buf_set_u32((uint8_t *)&in, 0, 0x20, 0x71);
 	LOG_DEBUG("DTMCS: 0x%x -> 0x%x", out, in);
 
 	return in;
@@ -564,10 +599,8 @@ static int dmi_op_timeout(struct target *target, uint32_t *data_in,
 		bool *dmi_busy_encountered, int dmi_op, uint32_t address,
 		uint32_t data_out, int timeout_sec, bool exec, bool ensure_success)
 {
-	select_dmi(target);
 
 	dmi_status_t status;
-	uint32_t address_in;
 
 	if (dmi_busy_encountered)
 		*dmi_busy_encountered = false;
@@ -594,12 +627,15 @@ static int dmi_op_timeout(struct target *target, uint32_t *data_in,
 	/* This first loop performs the request.  Note that if for some reason this
 	 * stays busy, it is actually due to the previous access. */
 	while (1) {
-		status = dmi_scan(target, NULL, NULL, dmi_op, address, data_out,
-				exec);
+		if (dmi_op == DMI_OP_READ)
+			DMI_OP(target, address, 0, 1, NULL, data_in, &status);
+		else
+			DMI_OP(target, address, data_out, dmi_op, NULL, NULL, &status);
 		if (status == DMI_STATUS_BUSY) {
 			increase_dmi_busy_delay(target);
 			if (dmi_busy_encountered)
 				*dmi_busy_encountered = true;
+			DMI_OP(target, 0x16, 0x700, 2, NULL, NULL, &status);// clear abstractcs.cmderr
 		} else if (status == DMI_STATUS_SUCCESS) {
 			break;
 		} else {
@@ -613,34 +649,6 @@ static int dmi_op_timeout(struct target *target, uint32_t *data_in,
 	if (status != DMI_STATUS_SUCCESS) {
 		LOG_ERROR("Failed %s at 0x%x; status=%d", op_name, address, status);
 		return ERROR_FAIL;
-	}
-
-	if (ensure_success) {
-		/* This second loop ensures the request succeeded, and gets back data.
-		 * Note that NOP can result in a 'busy' result as well, but that would be
-		 * noticed on the next DMI access we do. */
-		while (1) {
-			status = dmi_scan(target, &address_in, data_in, DMI_OP_NOP, address, 0,
-					false);
-			if (status == DMI_STATUS_BUSY) {
-				increase_dmi_busy_delay(target);
-				if (dmi_busy_encountered)
-					*dmi_busy_encountered = true;
-			} else if (status == DMI_STATUS_SUCCESS) {
-				break;
-			} else {
-				if (data_in) {
-					LOG_ERROR("Failed %s (NOP) at 0x%x; value=0x%x, status=%d",
-							op_name, address, *data_in, status);
-				} else {
-					LOG_ERROR("Failed %s (NOP) at 0x%x; status=%d", op_name, address,
-							status);
-				}
-				return ERROR_FAIL;
-			}
-			if (time(NULL) - start > timeout_sec)
-				return ERROR_TIMEOUT_REACHED;
-		}
 	}
 
 	return ERROR_OK;

@@ -182,6 +182,7 @@ endif
 if XDS110
 DRIVERFILES += %D%/xds110.c
 endif
+DRIVERFILES += %D%/wlink.c
 
 DRIVERHEADERS = \
 	%D%/bitbang.h \
@@ -195,6 +196,7 @@ DRIVERHEADERS = \
 	%D%/rlink_dtc_cmd.h \
 	%D%/rlink_ep1_cmd.h \
 	%D%/rlink_st7.h \
+	%D%/wlink.h \
 	%D%/versaloon/usbtoxxx/usbtoxxx.h \
 	%D%/versaloon/usbtoxxx/usbtoxxx_internal.h \
 	%D%/versaloon/versaloon.h \

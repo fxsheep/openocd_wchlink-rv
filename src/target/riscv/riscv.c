@@ -397,6 +397,7 @@ static uint32_t dtmcontrol_scan(struct target *target, uint32_t out)
 	}
 
 	uint32_t in = buf_get_u32(field.in_value, 0, 32);
+	buf_set_u32((uint8_t *)&in, 0, 0x20, 0x71);
 	LOG_DEBUG("DTMCONTROL: 0x%x -> 0x%x", out, in);
 
 	return in;
