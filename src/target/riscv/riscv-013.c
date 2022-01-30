@@ -1605,9 +1605,9 @@ static int examine(struct target *target)
 		dm->was_reset = true;
 	}
 
-	dmi_write(target, DM_DMCONTROL, DM_DMCONTROL_HARTSELLO |
-			DM_DMCONTROL_HARTSELHI | DM_DMCONTROL_DMACTIVE |
-			DM_DMCONTROL_HASEL);
+//	dmi_write(target, DM_DMCONTROL, DM_DMCONTROL_HARTSELLO |
+//			DM_DMCONTROL_HARTSELHI | DM_DMCONTROL_DMACTIVE |
+//			DM_DMCONTROL_HASEL);
 	uint32_t dmcontrol;
 	if (dmi_read(target, &dmcontrol, DM_DMCONTROL) != ERROR_OK)
 		return ERROR_FAIL;
