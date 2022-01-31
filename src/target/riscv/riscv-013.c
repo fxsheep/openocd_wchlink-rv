@@ -3499,7 +3499,7 @@ static int read_memory_progbuf(struct target *target, target_addr_t address,
 	if (riscv_program_write(&program) != ERROR_OK)
 		return ERROR_FAIL;
 
-	result = read_memory_progbuf_inner(target, address, size, count, buffer, increment);
+	result = ERROR_FAIL;
 
 	if (result != ERROR_OK) {
 		/* The full read did not succeed, so we will try to read each word individually. */
