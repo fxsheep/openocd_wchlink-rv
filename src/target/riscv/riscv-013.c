@@ -635,7 +635,6 @@ static int dmi_op_timeout(struct target *target, uint32_t *data_in,
 			increase_dmi_busy_delay(target);
 			if (dmi_busy_encountered)
 				*dmi_busy_encountered = true;
-			DMI_OP(target, 0x16, 0x700, 2, NULL, NULL, &status);// clear abstractcs.cmderr
 		} else if (status == DMI_STATUS_SUCCESS) {
 			break;
 		} else {
