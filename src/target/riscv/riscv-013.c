@@ -3911,12 +3911,6 @@ static int write_memory_progbuf(struct target *target, target_addr_t address,
 					riscv_batch_free(batch);
 					goto error;
 				}
-
-				/* Turn on autoexec */
-				dmi_write(target, DM_ABSTRACTAUTO,
-						1 << DM_ABSTRACTAUTO_AUTOEXECDATA_OFFSET);
-
-				setup_needed = false;
 			} else {
 				if (size > 4)
 					riscv_batch_add_dmi_write(batch, DM_DATA1, value >> 32);
