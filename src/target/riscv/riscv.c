@@ -1268,13 +1268,11 @@ int riscv_halt(struct target *target)
 
 static int riscv_assert_reset(struct target *target)
 {
-	RISCV_INFO(r);
-
 	LOG_DEBUG("[%d]", target->coreid);
 	struct target_type *tt = get_target_type(target);
 	riscv_invalidate_register_cache(target);
-	if (riscv_is_halted(target)) {
-		if (r->resume_go(target) != ERROR_OK)
+	if (!riscv_is_halted(target)) {
+		if (riscv_halt(target) != ERROR_OK)
 			return ERROR_FAIL;
 	}
 	return tt->assert_reset(target);

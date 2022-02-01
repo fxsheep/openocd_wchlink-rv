@@ -2364,8 +2364,7 @@ static int assert_reset(struct target *target)
 		uint32_t control = control_base;
 
 		control = set_hartsel(control_base, target->coreid);
-		control = set_field(control, DM_DMCONTROL_HALTREQ,
-				target->reset_halt ? 1 : 0);
+		control = set_field(control, DM_DMCONTROL_HALTREQ, 1);
 		dmi_write(target, DM_DMCONTROL, control);
 
 		/* Assert ndmreset */
@@ -2375,8 +2374,7 @@ static int assert_reset(struct target *target)
 	} else {
 		/* Reset just this hart. */
 		uint32_t control = set_hartsel(control_base, r->current_hartid);
-		control = set_field(control, DM_DMCONTROL_HALTREQ,
-				target->reset_halt ? 1 : 0);
+		control = set_field(control, DM_DMCONTROL_HALTREQ, 1);
 		control = set_field(control, DM_DMCONTROL_NDMRESET, 1);
 		dmi_write(target, DM_DMCONTROL, control);
 	}
@@ -2403,7 +2401,7 @@ static int deassert_reset(struct target *target)
 
 	/* Clear the reset, but make sure haltreq is still set */
 	uint32_t control = 0;
-	control = set_field(control, DM_DMCONTROL_HALTREQ, target->reset_halt ? 1 : 0);
+	control = set_field(control, DM_DMCONTROL_HALTREQ, 1);
 	control = set_field(control, DM_DMCONTROL_DMACTIVE, 1);
 	dmi_write(target, DM_DMCONTROL,
 			set_hartsel(control, r->current_hartid));
@@ -2464,6 +2462,11 @@ static int deassert_reset(struct target *target)
 			break;
 	}
 	info->dmi_busy_delay = dmi_busy_delay;
+	if (!target->reset_halt) {
+		if(riscv013_resume_go(target) != ERROR_OK) {
+			return ERROR_FAIL;
+		}
+	}
 	return ERROR_OK;
 }
 
